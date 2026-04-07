@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanceAI — WhatsApp Invoice Bot</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="landing">
+        <!-- Hero -->
+        <section class="hero">
+            <div class="hero-content">
+                <div class="badge">Powered by Sarvam AI</div>
+                <h1>Invoice on WhatsApp.<br>In 60 seconds.</h1>
+                <p class="subtitle">
+                    Send a voice note or text. Get a GST-compliant invoice PDF.
+                    No app to download. No forms to fill.
+                </p>
+                <div class="cta-row">
+                    <a href="/chat.html" class="btn btn-primary">Try Web Demo</a>
+                    <a href="#how-it-works" class="btn btn-outline">See How It Works</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Problem / Solution -->
+        <section class="comparison" id="how-it-works">
+            <div class="compare-card old">
+                <h3>Before FinanceAI</h3>
+                <ol>
+                    <li>Agree on deal in WhatsApp</li>
+                    <li>Open Tally / Vyapar / call your CA</li>
+                    <li>Manually enter all fields</li>
+                    <li>Generate PDF, download</li>
+                    <li>Go back to WhatsApp, send</li>
+                </ol>
+                <div class="time-badge">~15 minutes</div>
+            </div>
+            <div class="compare-card new">
+                <h3>With FinanceAI</h3>
+                <ol>
+                    <li>Agree on deal in WhatsApp</li>
+                    <li>Send voice note: "Ramesh ka invoice banao..."</li>
+                    <li>Tap Confirm</li>
+                </ol>
+                <div class="time-badge highlight">~60 seconds</div>
+            </div>
+        </section>
+
+        <!-- Input Modes -->
+        <section class="input-modes">
+            <h2>Three Ways to Create an Invoice</h2>
+            <div class="modes-grid">
+                <div class="mode-card">
+                    <div class="mode-icon">🎙</div>
+                    <h4>Voice Note</h4>
+                    <div class="mode-example">
+                        <em>"Ramesh Traders ka invoice banao, 150kg cotton, 45000 rupees, 12% GST"</em>
+                    </div>
+                    <p>Speak naturally in Hindi, English, or Hinglish. Sarvam Saaras V3 handles 22 Indian languages.</p>
+                </div>
+                <div class="mode-card">
+                    <div class="mode-icon">⌨</div>
+                    <h4>Text Message</h4>
+                    <div class="mode-example">
+                        <em>Invoice Kumar Enterprises 72000 200kg steel rods 18% GST</em>
+                    </div>
+                    <p>Type it out in any format. The AI figures out buyer, items, quantities, and GST.</p>
+                </div>
+                <div class="mode-card">
+                    <div class="mode-icon">↪</div>
+                    <h4>Forwarded Messages</h4>
+                    <div class="mode-example forwarded-example">
+                        <div class="fwd-msg"><span class="fwd-label">Ramesh:</span> Can you do 150kg cotton?</div>
+                        <div class="fwd-msg"><span class="fwd-label">You:</span> Yes, 300/kg works</div>
+                        <div class="fwd-msg"><span class="fwd-label">Ramesh:</span> Done. 12% GST right?</div>
+                        <div class="fwd-msg"><span class="fwd-label">You:</span> Yes, total 50400 with GST</div>
+                    </div>
+                    <p>Forward your negotiation chat. The AI extracts the final agreed deal — not earlier offers.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pipeline -->
+        <section class="pipeline">
+            <h2>How It Works</h2>
+            <div class="pipeline-steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <h4>Voice / Text Input</h4>
+                    <p>Send a voice note in any Indian language or type your invoice details</p>
+                </div>
+                <div class="step-arrow">&rarr;</div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <h4>AI Extraction</h4>
+                    <p>Sarvam Saaras V3 (STT) + Sarvam-30B extracts buyer, items, GST rate</p>
+                </div>
+                <div class="step-arrow">&rarr;</div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <h4>Review & Confirm</h4>
+                    <p>See a structured draft, edit if needed, tap Confirm</p>
+                </div>
+                <div class="step-arrow">&rarr;</div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <h4>Invoice PDF</h4>
+                    <p>GST-compliant PDF with IRN and QR code, sent instantly</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tech Stack -->
+        <section class="tech">
+            <h2>Built With</h2>
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <strong>Sarvam Saaras V3</strong>
+                    <span>Speech-to-Text for 22 Indian languages</span>
+                </div>
+                <div class="tech-item">
+                    <strong>Sarvam-30B</strong>
+                    <span>Invoice field extraction via chat completions</span>
+                </div>
+                <div class="tech-item">
+                    <strong>WhatsApp Cloud API</strong>
+                    <span>Native WhatsApp experience, zero friction</span>
+                </div>
+                <div class="tech-item">
+                    <strong>FastAPI + Python</strong>
+                    <span>Async backend with adapter pattern</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>FinanceAI &mdash; a demo by Haaziq for Sarvam AI</p>
+        </footer>
+    </div>
+</body>
+</html>
