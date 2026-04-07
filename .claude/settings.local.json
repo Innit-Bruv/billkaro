@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(~/.claude/skills/gstack/bin/gstack-review-read)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(taskkill //F //IM uvicorn.exe)",
+      "Bash(taskkill //F //FI \"WINDOWTITLE eq uvicorn*\")",
+      "Bash(pkill -f uvicorn)",
+      "Bash(uvicorn main:app --reload --port 8000)",
+      "Bash(curl -s -X POST http://localhost:8000/api/chat -F session_id=test-sarvam-api -F 'text=Patel Distributors ko invoice bhejo, 500 packets of basmati rice, rate 120 per packet, 5% GST')",
+      "Bash(curl -s -X POST http://localhost:8000/api/chat -F session_id=test-sarvam-2 -F 'text=Make invoice for Sharma Electronics, 10 LED TVs at 25000 each, 18% GST')",
+      "Bash(curl -s -X POST http://localhost:8000/api/chat -F session_id=test-sarvam-3 -F 'text=Invoice for Mehta Traders, 50kg sugar, rate 45 per kg, GST 5%')",
+      "Bash(uvicorn main:app --port 8000)",
+      "Bash(curl -s -X POST http://localhost:8000/api/chat -F session_id=no-reload-test -F 'text=Invoice for Sharma Electronics, 10 LED TVs at 25000 each, 18% GST')",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(curl -s -X POST http://localhost:8000/api/chat -F session_id=clean-test-2 -F 'text=Invoice for Sharma Electronics, 10 LED TVs at 25000 each, 18% GST')",
+      "Bash(pytest tests/ -v)",
+      "Bash(pip show:*)",
+      "Bash(sed:*)"
+    ]
+  }
+}

@@ -98,7 +98,7 @@ async def _handle_setup(session: Session, msg: IncomingMessage) -> BotResponse:
     if session.state == FlowState.IDLE:
         session.state = FlowState.SETUP_GSTIN
         return BotResponse(
-            text="Welcome to FinanceAI! 🎉 I'll help you create GST invoices in 60 seconds.\n\nFirst, what's your GSTIN?"
+            text="Welcome to BillKaro! 🎉 I'll help you create GST invoices in 60 seconds.\n\nFirst, what's your GSTIN?"
         )
 
     if session.state == FlowState.SETUP_GSTIN:

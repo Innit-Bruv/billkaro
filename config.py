@@ -13,18 +13,18 @@ class Settings(BaseSettings):
     # WhatsApp Cloud API
     whatsapp_token: str = ""
     whatsapp_phone_number_id: str = ""
-    whatsapp_verify_token: str = "financeai-verify"
+    whatsapp_verify_token: str = "billkaro-verify"
 
     # Supabase
     supabase_url: str = ""
     supabase_key: str = ""
 
     # Seller info (used in GST invoices)
-    seller_name: str = "FinanceAI Demo Pvt Ltd"
+    seller_name: str = "BillKaro Demo Pvt Ltd"
     seller_gstin: str = "27AADCB2230M1ZT"  # Maharashtra demo GSTIN
 
     # App
-    app_name: str = "FinanceAI"
+    app_name: str = "BillKaro"
     debug: bool = False
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

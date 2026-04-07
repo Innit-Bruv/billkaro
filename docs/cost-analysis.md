@@ -1,4 +1,4 @@
-# FinanceAI — Cost Analysis
+# BillKaro — Cost Analysis
 
 ## Sarvam AI — What's Free
 

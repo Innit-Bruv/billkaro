@@ -1,0 +1,50 @@
+{
+  "test-2": {
+    "name": "Test Seller Pvt Ltd",
+    "gstin": "27AADCB2230M1ZT"
+  },
+  "test-3": {
+    "name": "Test Seller Pvt Ltd",
+    "gstin": "27AADCB2230M1ZT"
+  },
+  "test-4": {
+    "name": "Test Seller Pvt Ltd",
+    "gstin": "27AADCB2230M1ZT"
+  },
+  "test-5": {
+    "name": "Test Seller Pvt Ltd",
+    "gstin": "27AADCB2230M1ZT"
+  },
+  "test-6": {
+    "name": "Test Seller Pvt Ltd",
+    "gstin": "27AADCB2230M1ZT"
+  },
+  "test-7": {
+    "name": "Test Seller Pvt Ltd",
+    "gstin": "27AADCB2230M1ZT"
+  },
+  "test-8": {
+    "name": "Test Seller Pvt Ltd",
+    "gstin": "27AADCB2230M1ZT"
+  },
+  "test-9": {
+    "name": "Test Seller Pvt Ltd",
+    "gstin": "27AADCB2230M1ZT"
+  },
+  "setup-1": {
+    "name": "Ramesh Traders Pvt Ltd",
+    "gstin": "27AABCU9603R1ZM"
+  },
+  "setup-2": {
+    "name": "Sharma Exports",
+    "gstin": "27AABCU9603R1ZM"
+  },
+  "setup-3": {
+    "name": "New Exports Ltd",
+    "gstin": "29AAGCK9999R1ZX"
+  },
+  "setup-4": {
+    "name": "Fallback Traders",
+    "gstin": ""
+  }
+}

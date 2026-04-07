@@ -1,7 +1,7 @@
-// FinanceAI — Web Chat Client
+// BillKaro — Web Chat Client
 
-const SESSION_ID = localStorage.getItem('financeai_session') || crypto.randomUUID();
-localStorage.setItem('financeai_session', SESSION_ID);
+const SESSION_ID = localStorage.getItem('billkaro_session') || crypto.randomUUID();
+localStorage.setItem('billkaro_session', SESSION_ID);
 
 const messagesEl = document.getElementById('messages');
 const textInput = document.getElementById('textInput');

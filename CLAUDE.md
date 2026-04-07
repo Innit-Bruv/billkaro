@@ -1,4 +1,4 @@
-# FinanceAI — WhatsApp-Native GST Invoice Bot
+# BillKaro — WhatsApp-Native GST Invoice Bot
 
 ## What this is
 An interview demo project for a PM/strategy role at Sarvam AI. A WhatsApp bot (+ web chat demo) that lets MSME sellers generate GST-compliant invoices via voice note or text in under 60 seconds, powered by Sarvam's AI stack.

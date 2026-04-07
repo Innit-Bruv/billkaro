@@ -1,4 +1,4 @@
-"""FinanceAI — WhatsApp-Native GST Invoice Bot."""
+"""BillKaro — WhatsApp-Native GST Invoice Bot."""
 
 import logging
 
@@ -12,7 +12,7 @@ from adapters.whatsapp import router as wa_router
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 app = FastAPI(
-    title="FinanceAI",
+    title="BillKaro",
     description="WhatsApp-native GST invoice bot powered by Sarvam AI",
     version="0.1.0",
 )

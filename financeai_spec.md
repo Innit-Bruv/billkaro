@@ -1,4 +1,4 @@
-# FinanceAI — WhatsApp-Native GST Invoice Bot
+# BillKaro — WhatsApp-Native GST Invoice Bot
 ## Product Spec v0.1 (MVP / Interview Demo Build)
 
 ---
@@ -40,7 +40,7 @@ This is slow, friction-heavy, and often gets delayed — which delays payment an
 ```
 [1] DEAL AGREED on WhatsApp (between seller and buyer, normal chat)
 
-[2] Seller opens their FinanceAI WhatsApp contact
+[2] Seller opens their BillKaro WhatsApp contact
     → Forwards 5–10 key messages from the negotiation
     OR
     → Sends a voice note: "Ramesh Traders ka invoice banao, 150kg cotton, 
@@ -48,7 +48,7 @@ This is slow, friction-heavy, and often gets delayed — which delays payment an
     OR
     → Types: "Invoice Ramesh Traders 45000 150kg cotton 12% GST"
 
-[3] FinanceAI parses input using Sarvam AI (STT + NLP)
+[3] BillKaro parses input using Sarvam AI (STT + NLP)
     → Extracts: buyer name, amount, line items, GST rate, quantity
 
 [4] Bot replies with a structured draft:
@@ -173,7 +173,7 @@ This is slow, friction-heavy, and often gets delayed — which delays payment an
 ## 8. Project Structure
 
 ```
-financeai/
+billkaro/
 ├── main.py                      # FastAPI app, CORS, route registration
 ├── adapters/
 │   ├── base.py                  # MessageAdapter abstract class (parse_incoming, send_response)
