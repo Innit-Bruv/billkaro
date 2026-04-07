@@ -20,9 +20,18 @@ DEMO_GSTIN_DB: dict[str, dict] = {
 
 
 async def lookup_gstin(buyer_name: str) -> dict | None:
-    """Look up GSTIN by buyer name. Returns dict with gstin, legal_name, state or None."""
+    """Look up by buyer name. Returns dict with gstin, legal_name, state or None."""
     key = buyer_name.strip().lower()
     for name, info in DEMO_GSTIN_DB.items():
         if name in key or key in name:
+            return info
+    return None
+
+
+async def lookup_by_gstin(gstin: str) -> dict | None:
+    """Reverse lookup by GSTIN value. Returns dict with gstin, legal_name, state or None."""
+    g = gstin.strip().upper()
+    for info in DEMO_GSTIN_DB.values():
+        if info["gstin"] == g:
             return info
     return None

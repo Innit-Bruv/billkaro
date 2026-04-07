@@ -83,9 +83,22 @@ class ExtractionResult(BaseModel):
     notes: str = ""
 
 
+# --- Seller Profile (set during first-time setup) ---
+
+class SellerProfile(BaseModel):
+    name: str = ""
+    gstin: str = ""
+    # state_code derived at use time: gstin[:2] if gstin else "27"
+
+
 # --- Session / State Machine ---
 
 class FlowState(str, Enum):
+    # Setup states (first-time onboarding)
+    SETUP_GSTIN = "SETUP_GSTIN"
+    SETUP_CONFIRM = "SETUP_CONFIRM"
+    SETUP_NAME = "SETUP_NAME"
+    # Invoice flow states
     IDLE = "IDLE"
     EXTRACTING = "EXTRACTING"
     AWAITING_FIELDS = "AWAITING_FIELDS"
@@ -99,6 +112,11 @@ class Session(BaseModel):
     state: FlowState = FlowState.IDLE
     invoice: Invoice = Field(default_factory=Invoice)
     missing_fields: list[str] = []
+    # Seller onboarding
+    seller_profile: Optional[SellerProfile] = None
+    gstin_attempts: int = 0
+    pending_gstin: str = ""
+    pending_seller_name: str = ""
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 

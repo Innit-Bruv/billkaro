@@ -1,11 +1,15 @@
 """Invoice flow state machine.
 
-States: IDLE → EXTRACTING → AWAITING_FIELDS → CONFIRMING → GENERATING → DONE
+States:
+  Setup:   SETUP_GSTIN → SETUP_CONFIRM → IDLE
+                       → SETUP_NAME    → IDLE
+  Invoice: IDLE → EXTRACTING → AWAITING_FIELDS → CONFIRMING → GENERATING → DONE
 
 The engine is adapter-agnostic: it takes an IncomingMessage and returns a BotResponse.
 """
 
 import logging
+import re
 from datetime import datetime
 
 from models.invoice import (
@@ -15,13 +19,21 @@ from models.invoice import (
     IncomingMessage,
     Invoice,
     MessageType,
+    SellerProfile,
     Session,
 )
 from services.demo_safety_net import get_cached_extraction
-from services.gstin_lookup import lookup_gstin
+from services.gstin_lookup import lookup_by_gstin, lookup_gstin
 from services.pdf_generator import generate_invoice_number, generate_invoice_pdf
 from services.sarvam_nlp import extract_invoice_fields
 from services.sarvam_stt import transcribe_audio
+import services.seller_store as seller_store
+
+_GSTIN_RE = re.compile(r'^([0-2][0-9]|3[0-8])[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$')
+
+
+def _is_valid_gstin(s: str) -> bool:
+    return bool(_GSTIN_RE.match(s))
 
 logger = logging.getLogger(__name__)
 
@@ -45,16 +57,29 @@ async def handle_message(msg: IncomingMessage) -> BotResponse:
     session = get_session(msg.session_id)
     session.touch()
 
-    # Handle reset command
+    # Load seller profile from disk if not yet in memory
+    if session.seller_profile is None:
+        loaded = seller_store.load(msg.session_id)
+        if loaded:
+            session.seller_profile = loaded
+
+    # Handle reset command — clears both session and seller profile
     if msg.type == MessageType.TEXT and msg.text.strip().lower() in ("reset", "start over", "new", "cancel"):
+        seller_store.delete(msg.session_id)
         reset_session(msg.session_id)
         return BotResponse(text="Session reset. Send me a voice note or text to create a new invoice.")
 
-    # Handle button responses
+    # First-time user: no seller profile → run setup flow
+    if session.seller_profile is None:
+        return await _handle_setup(session, msg)
+
+    # Handle button responses (setup buttons also route through here)
     if msg.type == MessageType.BUTTON:
+        if msg.button_payload.startswith("setup_"):
+            return await _handle_setup(session, msg)
         return await _handle_button(session, msg)
 
-    # Route based on state
+    # Route based on invoice flow state
     if session.state in (FlowState.IDLE, FlowState.DONE):
         return await _handle_new_input(session, msg)
     elif session.state == FlowState.AWAITING_FIELDS:
@@ -64,6 +89,75 @@ async def handle_message(msg: IncomingMessage) -> BotResponse:
         return await _handle_edit_text(session, msg)
     else:
         return BotResponse(text="Processing your previous request. Please wait...")
+
+
+async def _handle_setup(session: Session, msg: IncomingMessage) -> BotResponse:
+    """Drive the first-time seller onboarding flow."""
+
+    # First message → begin setup
+    if session.state == FlowState.IDLE:
+        session.state = FlowState.SETUP_GSTIN
+        return BotResponse(
+            text="Welcome to FinanceAI! 🎉 I'll help you create GST invoices in 60 seconds.\n\nFirst, what's your GSTIN?"
+        )
+
+    if session.state == FlowState.SETUP_GSTIN:
+        gstin = msg.text.strip().upper()
+        if not _is_valid_gstin(gstin):
+            session.gstin_attempts += 1
+            if session.gstin_attempts >= 3:
+                session.state = FlowState.SETUP_NAME
+                return BotResponse(text="No worries — let's skip the GSTIN for now. What's your business name?")
+            return BotResponse(
+                text="That doesn't look like a valid GSTIN (15 characters, e.g. 27AABCS1234R1ZV). Try again?"
+            )
+
+        session.pending_gstin = gstin
+        gstin_info = await lookup_by_gstin(gstin)
+        if gstin_info:
+            session.pending_seller_name = gstin_info["legal_name"]
+            session.state = FlowState.SETUP_CONFIRM
+            return BotResponse(
+                text=f"Found it! Is this you?\n🏢 {gstin_info['legal_name']}\n📍 {gstin_info['state']}",
+                buttons=[
+                    {"id": "setup_yes", "title": "Yes, that's me"},
+                    {"id": "setup_no", "title": "No, enter manually"},
+                ],
+            )
+        else:
+            session.state = FlowState.SETUP_NAME
+            return BotResponse(text="I couldn't find that GSTIN in my records. What's your business name?")
+
+    if session.state == FlowState.SETUP_CONFIRM:
+        if msg.type == MessageType.BUTTON and msg.button_payload == "setup_yes":
+            return await _complete_setup(session, msg.session_id,
+                                         session.pending_seller_name, session.pending_gstin)
+        else:  # "setup_no" or any text
+            session.state = FlowState.SETUP_NAME
+            return BotResponse(text="No problem. What's your business name?")
+
+    if session.state == FlowState.SETUP_NAME:
+        name = msg.text.strip()
+        if not name:
+            return BotResponse(text="Please enter your business name:")
+        return await _complete_setup(session, msg.session_id, name, session.pending_gstin)
+
+    # Fallback (shouldn't reach here)
+    session.state = FlowState.SETUP_GSTIN
+    return BotResponse(text="Let's get you set up. What's your GSTIN?")
+
+
+async def _complete_setup(session: Session, session_id: str, name: str, gstin: str) -> BotResponse:
+    """Finalise setup, persist profile, transition to IDLE."""
+    session.seller_profile = SellerProfile(name=name, gstin=gstin)
+    session.state = FlowState.IDLE
+    session.gstin_attempts = 0
+    session.pending_gstin = ""
+    session.pending_seller_name = ""
+    seller_store.save(session_id, session.seller_profile)
+    return BotResponse(
+        text=f"You're set up, {name}! 🎉\nSend me a voice note or type invoice details to create your first invoice."
+    )
 
 
 async def _handle_new_input(session: Session, msg: IncomingMessage) -> BotResponse:
@@ -226,9 +320,15 @@ async def _generate_invoice(session: Session) -> BotResponse:
 
     settings = get_settings()
     if not invoice.seller_name:
-        invoice.seller_name = settings.seller_name
+        invoice.seller_name = (
+            session.seller_profile.name if session.seller_profile and session.seller_profile.name
+            else settings.seller_name
+        )
     if not invoice.seller_gstin:
-        invoice.seller_gstin = settings.seller_gstin
+        invoice.seller_gstin = (
+            session.seller_profile.gstin if session.seller_profile and session.seller_profile.gstin
+            else settings.seller_gstin
+        )
 
     try:
         pdf_bytes = generate_invoice_pdf(invoice)
