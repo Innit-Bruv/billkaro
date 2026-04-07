@@ -278,6 +278,45 @@ async def test_returning_user_skips_setup():
 
 
 @pytest.mark.asyncio
+async def test_setup_completion_shows_mode_buttons():
+    """After setup, welcome message should include 3 input mode buttons."""
+    reset_session("setup-6")
+    seller_store.delete("setup-6")
+
+    await handle_message(IncomingMessage(session_id="setup-6", type=MessageType.TEXT, text="hi"))
+    await handle_message(IncomingMessage(session_id="setup-6", type=MessageType.TEXT, text="27AABCU9603R1ZM"))
+    resp = await handle_message(IncomingMessage(session_id="setup-6", type=MessageType.BUTTON, button_payload="setup_yes"))
+
+    button_ids = [b["id"] for b in resp.buttons]
+    assert "mode_voice" in button_ids
+    assert "mode_text" in button_ids
+    assert "mode_forward" in button_ids
+    assert get_session("setup-6").state == FlowState.IDLE
+
+
+@pytest.mark.asyncio
+async def test_mode_buttons_return_guides_and_stay_idle():
+    """Tapping a mode button returns a guide and leaves state as IDLE."""
+    seller_store.save("setup-7", SellerProfile(name="Test Co", gstin="27AADCB2230M1ZT"))
+    reset_session("setup-7")
+
+    for payload, keyword in [
+        ("mode_voice", "mic"),
+        ("mode_text", "type"),
+        ("mode_forward", "Forward"),
+    ]:
+        reset_session("setup-7")
+        resp = await handle_message(IncomingMessage(
+            session_id="setup-7", type=MessageType.BUTTON, button_payload=payload
+        ))
+        assert keyword.lower() in resp.text.lower(), f"Expected '{keyword}' in {payload} response"
+        assert get_session("setup-7").state == FlowState.IDLE
+        assert resp.pdf_bytes is None
+
+    seller_store.delete("setup-7")
+
+
+@pytest.mark.asyncio
 async def test_new_button_resets():
     """Test that the 'new' button resets the session."""
     reset_session("test-5")

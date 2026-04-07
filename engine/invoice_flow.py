@@ -156,7 +156,19 @@ async def _complete_setup(session: Session, session_id: str, name: str, gstin: s
     session.pending_seller_name = ""
     seller_store.save(session_id, session.seller_profile)
     return BotResponse(
-        text=f"You're set up, {name}! 🎉\nSend me a voice note or type invoice details to create your first invoice."
+        text=(
+            f"You're set up, {name}! 🎉\n\n"
+            "Create a GST invoice in 60 seconds — 3 ways:\n\n"
+            "🎙 *Voice* — say it in Hindi, English or Hinglish\n"
+            "⌨️ *Text* — type the deal details\n"
+            "↪ *Forward* — paste a negotiation chat, I'll extract the invoice\n\n"
+            "How do you want to try?"
+        ),
+        buttons=[
+            {"id": "mode_voice",   "title": "🎙 Try Voice"},
+            {"id": "mode_text",    "title": "⌨️ Type It"},
+            {"id": "mode_forward", "title": "↪ Forward Chat"},
+        ],
     )
 
 
@@ -288,8 +300,30 @@ async def _handle_missing_field_response(session: Session, msg: IncomingMessage)
 
 
 async def _handle_button(session: Session, msg: IncomingMessage) -> BotResponse:
-    """Handle button press (Confirm / Edit)."""
+    """Handle button press (Confirm / Edit / mode guides)."""
     payload = msg.button_payload.lower()
+
+    # Input mode guide buttons — teach the feature, leave state as IDLE
+    if payload == "mode_voice":
+        return BotResponse(text=(
+            "Hold the 🎤 mic button in WhatsApp and record your details.\n"
+            "Speak naturally — for example:\n\n"
+            "_'Ramesh Traders ka invoice banao, 150kg cotton, 45000 rupees, 12% GST'_\n\n"
+            "Works in Hindi, English, or Hinglish 🇮🇳"
+        ))
+    if payload == "mode_text":
+        return BotResponse(text=(
+            "Just type your deal details. For example:\n\n"
+            "_Invoice Kumar Enterprises 200kg steel rods 72000 18% GST_\n\n"
+            "I'll figure out buyer name, items, and GST — type it naturally."
+        ))
+    if payload == "mode_forward":
+        return BotResponse(text=(
+            "Forward me the WhatsApp conversation where you negotiated the deal.\n\n"
+            "I'll read through it, find the final agreed price, and create the "
+            "invoice automatically — ignoring earlier offers.\n\n"
+            "Just paste the messages below 👇"
+        ))
 
     if payload == "confirm" and session.state == FlowState.CONFIRMING:
         return await _generate_invoice(session)
