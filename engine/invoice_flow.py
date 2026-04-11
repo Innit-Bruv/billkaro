@@ -22,12 +22,20 @@ from models.invoice import (
     SellerProfile,
     Session,
 )
+from i18n.strings import LANG_NAMES, STRINGS, detect_script_language, t
 from services.demo_safety_net import get_cached_extraction
 from services.gstin_lookup import lookup_by_gstin, lookup_gstin
 from services.pdf_generator import generate_invoice_number, generate_invoice_pdf
 from services.sarvam_nlp import extract_invoice_fields
 from services.sarvam_stt import transcribe_audio
 import services.seller_store as seller_store
+
+
+def _seller_lang(session: Session) -> str:
+    """Active language code for bot responses. Defaults to English."""
+    if session.seller_profile and session.seller_profile.preferred_language:
+        return session.seller_profile.preferred_language
+    return "en"
 
 _GSTIN_RE = re.compile(r'^([0-2][0-9]|3[0-8])[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$')
 
@@ -65,21 +73,40 @@ async def handle_message(msg: IncomingMessage) -> BotResponse:
 
     # Handle reset command — clears both session and seller profile
     if msg.type == MessageType.TEXT and msg.text.strip().lower() in ("reset", "start over", "new", "cancel"):
+        lang = _seller_lang(session)
         seller_store.delete(msg.session_id)
         reset_session(msg.session_id)
-        return BotResponse(text="Session reset. Send me a voice note or text to create a new invoice.")
+        return BotResponse(text=t("reset_ack", lang))
+
+    # Handle "change language" command anytime after setup
+    if (
+        msg.type == MessageType.TEXT
+        and session.seller_profile is not None
+        and msg.text.strip().lower() in ("change language", "language", "भाषा", "மொழி", "ഭാഷ", "ভাষা")
+    ):
+        session.seller_profile.preferred_language = None
+        seller_store.save(msg.session_id, session.seller_profile)
+        return BotResponse(
+            text="Which language would you like me to reply in?",
+            buttons=[{"id": f"lang_set_{code}", "title": name} for code, name in LANG_NAMES.items()],
+        )
 
     # First-time user: no seller profile → run setup flow
     if session.seller_profile is None:
         return await _handle_setup(session, msg)
 
-    # Handle button responses (setup buttons also route through here)
+    # Handle button responses (setup + language-confirm buttons route here too)
     if msg.type == MessageType.BUTTON:
         if msg.button_payload.startswith("setup_"):
             return await _handle_setup(session, msg)
+        if msg.button_payload.startswith("lang_"):
+            return await _handle_language_button(session, msg)
         return await _handle_button(session, msg)
 
     # Route based on invoice flow state
+    if session.state == FlowState.AWAITING_LANGUAGE_CONFIRM:
+        # Text sent instead of button — treat as implicit "keep detected lang"
+        return await _confirm_pending_language(session, msg, accept=True)
     if session.state in (FlowState.IDLE, FlowState.DONE):
         return await _handle_new_input(session, msg)
     elif session.state == FlowState.AWAITING_FIELDS:
@@ -88,7 +115,7 @@ async def handle_message(msg: IncomingMessage) -> BotResponse:
         # User sent text instead of button — treat as edit
         return await _handle_edit_text(session, msg)
     else:
-        return BotResponse(text="Processing your previous request. Please wait...")
+        return BotResponse(text=t("busy", _seller_lang(session)))
 
 
 async def _handle_setup(session: Session, msg: IncomingMessage) -> BotResponse:
@@ -177,23 +204,40 @@ async def _handle_new_input(session: Session, msg: IncomingMessage) -> BotRespon
     session.state = FlowState.EXTRACTING
     session.touch()
 
-    # Step 1: Get text from input
+    # Step 1: Get text from input (+ detected language from STT if voice)
     text = ""
+    detected_lang: str | None = None
     if msg.type == MessageType.VOICE and msg.audio_data:
         try:
-            text = await transcribe_audio(msg.audio_data, msg.audio_filename)
+            text, detected_lang = await transcribe_audio(msg.audio_data, msg.audio_filename)
         except Exception as e:
             logger.error("STT failed: %s", e)
             text = ""
     elif msg.type == MessageType.TEXT:
         text = msg.text
+        detected_lang = detect_script_language(text)
 
     if not text:
         session.state = FlowState.IDLE
-        return BotResponse(text="I couldn't understand that. Please send a voice note or text with invoice details.")
+        return BotResponse(text=t("input_unclear", _seller_lang(session)))
 
-    # Step 2: Extract fields (with demo safety net)
+    # Step 2: If seller hasn't confirmed a language yet, run the detect-confirm
+    # flow. Buffer the message so we can resume extraction after confirmation.
+    if (
+        session.seller_profile is not None
+        and session.seller_profile.preferred_language is None
+        and detected_lang is not None
+        and detected_lang != "en"
+    ):
+        return _ask_language_confirm(session, text, detected_lang)
+
     is_forwarded = _looks_like_forwarded(text)
+    return await _extract_and_draft(session, text, is_forwarded)
+
+
+async def _extract_and_draft(session: Session, text: str, is_forwarded: bool) -> BotResponse:
+    """Run extraction on ``text`` and build a draft response or prompt for fields."""
+    # Step 2: Extract fields (with demo safety net)
     extraction = get_cached_extraction(text)
     if extraction is None:
         try:
@@ -211,17 +255,18 @@ async def _handle_new_input(session: Session, msg: IncomingMessage) -> BotRespon
         if gstin_info:
             session.invoice.buyer_gstin = gstin_info["gstin"]
 
+    lang = _seller_lang(session)
+
     # Step 5: Check for missing required fields
-    missing = _check_missing_fields(session.invoice)
+    missing = _check_missing_fields(session.invoice, lang)
     if missing:
         session.state = FlowState.AWAITING_FIELDS
         session.missing_fields = missing
-        field = missing[0]
-        return BotResponse(text=f"Almost there! I need a few more details.\n\nPlease provide the **{field}**:")
+        return BotResponse(text=t("missing_prompt", lang, field=_field_label(missing[0], lang)))
 
     # All fields present — show draft
     session.state = FlowState.CONFIRMING
-    return _build_draft_response(session.invoice)
+    return _build_draft_response(session.invoice, lang)
 
 
 def _build_invoice(extraction: ExtractionResult) -> Invoice:
@@ -241,41 +286,58 @@ def _build_invoice(extraction: ExtractionResult) -> Invoice:
     return inv
 
 
-def _check_missing_fields(invoice: Invoice) -> list[str]:
-    """Return list of missing required field names."""
-    missing = []
+# Map internal field keys → translation key for their display label.
+_FIELD_LABEL_KEYS = {
+    "buyer": "field_buyer",
+    "items": "field_items",
+    "gst": "field_gst",
+}
+
+
+def _check_missing_fields(invoice: Invoice, lang: str = "en") -> list[str]:
+    """Return list of missing required field **keys** (not display labels).
+
+    Keys are stable identifiers (buyer/items/gst) — the display label is
+    rendered via ``t()`` at the time the prompt is shown. Back-compat: the
+    returned strings still contain substrings like "buyer"/"gst"/"item"
+    that legacy callers may match against.
+    """
+    missing: list[str] = []
     if not invoice.buyer_name:
-        missing.append("buyer name")
+        missing.append("buyer")
     if not invoice.items:
-        missing.append("item details (description, quantity, rate)")
+        missing.append("items")
     if not invoice.gst_rate:
-        missing.append("GST rate (enter 5, 12, 18, or 28)")
+        missing.append("gst")
     return missing
+
+
+def _field_label(key: str, lang: str) -> str:
+    """Render the human-readable label for a missing-field key."""
+    return t(_FIELD_LABEL_KEYS.get(key, key), lang)
 
 
 async def _handle_missing_field_response(session: Session, msg: IncomingMessage) -> BotResponse:
     """Handle user's response to a missing field prompt."""
+    lang = _seller_lang(session)
     if not session.missing_fields:
         session.state = FlowState.CONFIRMING
-        return _build_draft_response(session.invoice)
+        return _build_draft_response(session.invoice, lang)
 
-    field = session.missing_fields[0]
+    field_key = session.missing_fields[0]
     text = msg.text.strip()
 
-    if "buyer" in field.lower() or "name" in field.lower():
+    if field_key == "buyer":
         session.invoice.buyer_name = text
-        # Try GSTIN lookup
         gstin_info = await lookup_gstin(text)
         if gstin_info:
             session.invoice.buyer_gstin = gstin_info["gstin"]
-    elif "gst" in field.lower():
-        # Parse GST rate from plain number or "12%" etc.
+    elif field_key == "gst":
         import re
         match = re.search(r"\d+", text)
         if match:
             session.invoice.gst_rate = float(match.group())
-    elif "item" in field.lower():
-        # Try to extract items from the response
+    elif field_key == "items":
         try:
             extraction = await extract_invoice_fields(text)
             if extraction.items:
@@ -288,15 +350,13 @@ async def _handle_missing_field_response(session: Session, msg: IncomingMessage)
 
     session.missing_fields.pop(0)
 
-    # Check if more fields are missing
-    remaining = _check_missing_fields(session.invoice)
+    remaining = _check_missing_fields(session.invoice, lang)
     if remaining:
         session.missing_fields = remaining
-        field = remaining[0]
-        return BotResponse(text=f"Got it. Now please provide the **{field}**:")
+        return BotResponse(text=t("missing_next", lang, field=_field_label(remaining[0], lang)))
 
     session.state = FlowState.CONFIRMING
-    return _build_draft_response(session.invoice)
+    return _build_draft_response(session.invoice, lang)
 
 
 async def _handle_button(session: Session, msg: IncomingMessage) -> BotResponse:
@@ -325,16 +385,20 @@ async def _handle_button(session: Session, msg: IncomingMessage) -> BotResponse:
             "Just paste the messages below 👇"
         ))
 
+    lang = _seller_lang(session)
     if payload == "confirm" and session.state == FlowState.CONFIRMING:
         return await _generate_invoice(session)
     elif payload == "edit":
         session.state = FlowState.IDLE
-        return BotResponse(text="No problem. Send me the updated details and I'll create a new draft.")
+        return BotResponse(text=t("edit_ack", lang))
     elif payload == "new":
-        reset_session(msg.session_id)
-        return BotResponse(text="Ready for a new invoice. Send me details via voice or text.")
+        # Preserve the seller profile (including language) across "new invoice".
+        preserved = session.seller_profile
+        new_session = reset_session(msg.session_id)
+        new_session.seller_profile = preserved
+        return BotResponse(text=t("new_ack", lang))
     else:
-        return BotResponse(text="Please confirm or edit the current draft.")
+        return BotResponse(text=t("btn_fallback", lang))
 
 
 async def _handle_edit_text(session: Session, msg: IncomingMessage) -> BotResponse:
@@ -364,20 +428,28 @@ async def _generate_invoice(session: Session) -> BotResponse:
             else settings.seller_gstin
         )
 
+    lang = _seller_lang(session)
     try:
-        pdf_bytes = generate_invoice_pdf(invoice)
+        pdf_bytes = generate_invoice_pdf(invoice, lang=lang)
     except Exception as e:
         logger.error("PDF generation failed: %s", e)
         session.state = FlowState.CONFIRMING
-        return BotResponse(text="Failed to generate PDF. Please try confirming again.")
+        return BotResponse(text=t("pdf_fail", lang))
 
     session.state = FlowState.DONE
     session.touch()
 
     return BotResponse(
-        text=f"Invoice **{invoice.invoice_number}** generated for **{invoice.buyer_name}**.\nTotal: Rs. {invoice.total:,.2f} (incl. {invoice.gst_rate}% GST)",
+        text=t(
+            "invoice_done",
+            lang,
+            number=invoice.invoice_number,
+            buyer=invoice.buyer_name,
+            total=f"{invoice.total:,.2f}",
+            rate=invoice.gst_rate,
+        ),
         pdf_bytes=pdf_bytes,
-        buttons=[{"id": "new", "title": "New Invoice"}],
+        buttons=[{"id": "new", "title": t("btn_new", lang)}],
     )
 
 
@@ -393,27 +465,106 @@ def _looks_like_forwarded(text: str) -> bool:
     return matches >= 2
 
 
-def _build_draft_response(invoice: Invoice) -> BotResponse:
-    """Build the draft confirmation message."""
+def _build_draft_response(invoice: Invoice, lang: str = "en") -> BotResponse:
+    """Build the draft confirmation message in the seller's preferred language."""
     items_text = ""
     for item in invoice.items:
         items_text += f"  - {item.description} | {item.quantity:g} {item.unit} x Rs. {item.rate:,.0f} = Rs. {item.amount:,.2f}\n"
 
-    draft = f"""**Invoice Draft**
+    gstin_display = invoice.buyer_gstin or t("draft_gstin_none", lang)
+    draft = f"""**{t('draft_header', lang)}**
 
-**Buyer:** {invoice.buyer_name}
-**GSTIN:** {invoice.buyer_gstin or 'Not provided'}
+**{t('draft_buyer', lang)}:** {invoice.buyer_name}
+**{t('draft_gstin', lang)}:** {gstin_display}
 
-**Items:**
+**{t('draft_items', lang)}:**
 {items_text}
-**Subtotal:** Rs. {invoice.subtotal:,.2f}
-**GST ({invoice.gst_rate}%):** Rs. {invoice.gst_amount:,.2f}
-**Total:** Rs. {invoice.total:,.2f}"""
+**{t('draft_subtotal', lang)}:** Rs. {invoice.subtotal:,.2f}
+**{t('draft_gst', lang)} ({invoice.gst_rate}%):** Rs. {invoice.gst_amount:,.2f}
+**{t('draft_total', lang)}:** Rs. {invoice.total:,.2f}"""
 
     return BotResponse(
         text=draft,
         buttons=[
-            {"id": "confirm", "title": "Confirm"},
-            {"id": "edit", "title": "Edit"},
+            {"id": "confirm", "title": t("btn_confirm", lang)},
+            {"id": "edit", "title": t("btn_edit", lang)},
         ],
     )
+
+
+# ---------------------------------------------------------------------------
+# Language detection + confirmation flow
+# ---------------------------------------------------------------------------
+
+def _ask_language_confirm(session: Session, text: str, detected: str) -> BotResponse:
+    """Pause the current invoice input and ask the seller to confirm language."""
+    session.state = FlowState.AWAITING_LANGUAGE_CONFIRM
+    session.pending_language = detected
+    session.pending_message_text = text
+    session.pending_message_is_forwarded = _looks_like_forwarded(text)
+
+    # Bilingual prompt: native script line + English fallback for readability.
+    prompt = f"{t('lang_confirm', detected)}\n\n({t('lang_confirm', 'en')} — tap 'Keep English' to stay in English.)"
+    return BotResponse(
+        text=prompt,
+        buttons=[
+            {"id": f"lang_set_{detected}", "title": t("btn_lang_keep", detected)},
+            {"id": "lang_set_en", "title": "Keep English"},
+            {"id": "lang_set_other", "title": t("btn_lang_switch", detected)},
+        ],
+    )
+
+
+async def _handle_language_button(session: Session, msg: IncomingMessage) -> BotResponse:
+    """Handle a ``lang_set_*`` button press."""
+    payload = msg.button_payload
+
+    if payload == "lang_set_other":
+        # Show the full picker.
+        return BotResponse(
+            text="Pick a language:",
+            buttons=[
+                {"id": f"lang_set_{code}", "title": name}
+                for code, name in LANG_NAMES.items()
+            ],
+        )
+
+    if not payload.startswith("lang_set_"):
+        return BotResponse(text=t("btn_fallback", _seller_lang(session)))
+
+    code = payload.removeprefix("lang_set_")
+    if code not in STRINGS:
+        return BotResponse(text=t("btn_fallback", _seller_lang(session)))
+
+    return await _confirm_pending_language(session, msg, accept=True, override_lang=code)
+
+
+async def _confirm_pending_language(
+    session: Session,
+    msg: IncomingMessage,
+    accept: bool,
+    override_lang: str | None = None,
+) -> BotResponse:
+    """Persist the language choice and resume the buffered invoice input."""
+    chosen = override_lang or (session.pending_language if accept else "en") or "en"
+
+    if session.seller_profile is None:
+        return BotResponse(text=t("input_unclear", "en"))
+
+    session.seller_profile.preferred_language = chosen
+    seller_store.save(msg.session_id, session.seller_profile)
+
+    pending_text = session.pending_message_text
+    pending_forwarded = session.pending_message_is_forwarded
+    session.pending_language = None
+    session.pending_message_text = ""
+    session.pending_message_is_forwarded = False
+
+    if not pending_text:
+        # Language was set via "change language" command — no buffered message.
+        session.state = FlowState.IDLE
+        return BotResponse(text=t("lang_set", chosen))
+
+    # Resume extraction on the buffered message in the chosen language.
+    session.state = FlowState.EXTRACTING
+    return await _extract_and_draft(session, pending_text, pending_forwarded)

@@ -75,7 +75,12 @@ def load(session_id: str) -> Optional[SellerProfile]:
     client = _get_client()
     if client:
         try:
-            result = client.table("seller_profiles").select("name,gstin").eq("session_id", session_id).execute()
+            result = (
+                client.table("seller_profiles")
+                .select("name,gstin,preferred_language")
+                .eq("session_id", session_id)
+                .execute()
+            )
             if result.data:
                 return SellerProfile(**result.data[0])
         except Exception as e:
@@ -92,6 +97,7 @@ def save(session_id: str, profile: SellerProfile) -> None:
                 "session_id": session_id,
                 "name": profile.name,
                 "gstin": profile.gstin,
+                "preferred_language": profile.preferred_language,
             }).execute()
             return
         except Exception as e:

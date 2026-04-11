@@ -85,9 +85,14 @@ class ExtractionResult(BaseModel):
 
 # --- Seller Profile (set during first-time setup) ---
 
+# Supported UI languages. "en" is the default until the seller confirms otherwise.
+SUPPORTED_LANGUAGES = ("en", "hi", "ta", "ml", "bn", "mr")
+
+
 class SellerProfile(BaseModel):
     name: str = ""
     gstin: str = ""
+    preferred_language: Optional[str] = None  # None = not yet confirmed
     # state_code derived at use time: gstin[:2] if gstin else "27"
 
 
@@ -98,6 +103,8 @@ class FlowState(str, Enum):
     SETUP_GSTIN = "SETUP_GSTIN"
     SETUP_CONFIRM = "SETUP_CONFIRM"
     SETUP_NAME = "SETUP_NAME"
+    # Language confirmation (after setup, before first invoice)
+    AWAITING_LANGUAGE_CONFIRM = "AWAITING_LANGUAGE_CONFIRM"
     # Invoice flow states
     IDLE = "IDLE"
     EXTRACTING = "EXTRACTING"
@@ -117,6 +124,10 @@ class Session(BaseModel):
     gstin_attempts: int = 0
     pending_gstin: str = ""
     pending_seller_name: str = ""
+    # Language detection: holds detected code + buffered message awaiting confirmation
+    pending_language: Optional[str] = None
+    pending_message_text: str = ""
+    pending_message_is_forwarded: bool = False
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 

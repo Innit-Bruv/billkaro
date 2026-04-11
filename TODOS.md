@@ -2,6 +2,21 @@
 
 ---
 
+## DONE (2026-04-12) — Multi-language Support (6 Indian languages)
+**What shipped:** Hindi, English, Tamil, Malayalam, Bengali, Marathi across bot replies, quick-reply buttons, and PDF labels. Auto-detect input language via Sarvam STT (`language_code: "unknown"`) + Unicode-script detection for typed text. Seller-preferred language for all output. Bilingual PDFs (English always present for GST compliance + regional script below).
+
+**Files:** `i18n/strings.py` (28 keys × 6 langs + `detect_script_language`), `assets/fonts/*.ttf` (~2MB Noto variable fonts bundled), `services/pdf_generator.py` (rewritten with `lang=` param), `services/sarvam_stt.py` (returns `(transcript, detected_lang)`), `services/sarvam_nlp.py` (multilingual extraction prompt, JSON still in English for GST compliance), `engine/invoice_flow.py` (AWAITING_LANGUAGE_CONFIRM state + buffer-and-resume flow), `models/invoice.py` (preferred_language field + pending_message_* buffers), `supabase/migrations/20260411000000_add_preferred_language.sql`.
+
+**Tests:** 51/51 passing. 27 new tests added — `tests/test_i18n.py` (string table parity, format-placeholder preservation, script detection, `t()` fallbacks) + `tests/test_multilingual_flow.py` (end-to-end detect → confirm → resume, change-language command, localized reset).
+
+**Remaining follow-ups (owner: Haaziq):**
+1. **Manual render verification** — Start server, generate one invoice each for hi/ta/ml/bn/mr, visually confirm regional-script labels render correctly in the PDF and no tofu boxes appear.
+2. **Translation quality check** — Claude-authored baselines for 5 non-English languages need native-speaker or Sarvam Translate API verification before demo. See commitment in `i18n/strings.py` docstring.
+3. **Supabase migration apply** — Run `supabase/migrations/20260411000000_add_preferred_language.sql` against live DB (currently only local fallback is fully tested end-to-end).
+4. **Demo script update** — Video/demo script should showcase a Tamil or Hindi voice-note flow to prove the Sarvam pitch.
+
+---
+
 ## P1 — Send Invoice to Buyer via WhatsApp
 **What:** After confirming an invoice, bot asks "Want to send this to Ramesh directly?" — seller taps Yes and BillKaro WhatsApps the PDF to the buyer's number.
 **Why:** Closes the entire loop inside WhatsApp. Right now seller has to manually download and forward. This is the feature that makes the narrative complete: negotiate → invoice → deliver, never leave WhatsApp.

@@ -9,17 +9,25 @@ from models.invoice import ExtractionResult, LineItem
 
 logger = logging.getLogger(__name__)
 
-EXTRACTION_PROMPT = """You are an invoice data extractor for Indian MSMEs. Extract invoice details from the user's message and return ONLY valid JSON — no markdown, no explanation.
+_MULTILINGUAL_NOTE = """
+Input may be in Hindi, English, Tamil, Malayalam, Bengali, Marathi, or a mix (e.g. Hinglish).
+ALL JSON values MUST be returned in English / Latin script — this data is used to generate a
+legal GST invoice that must be machine-readable by Indian tax authorities. Transliterate any
+non-Latin buyer names to Latin script (e.g. रमेश ट्रेडर्स → "Ramesh Traders"). Translate item
+descriptions to English (e.g. கપாસ → "Cotton", चावल → "Rice").
+"""
+
+EXTRACTION_PROMPT = f"""You are an invoice data extractor for Indian MSMEs. Extract invoice details from the user's message and return ONLY valid JSON — no markdown, no explanation.
 
 Return format:
-{
+{{
   "buyer_name": "",
   "amount": 0,
-  "items": [{"description": "", "quantity": 0, "unit": "", "rate": 0}],
+  "items": [{{"description": "", "quantity": 0, "unit": "", "rate": 0}}],
   "gst_rate": 0,
   "buyer_gstin": "",
   "notes": ""
-}
+}}
 
 Rules:
 - If quantity and rate are given, compute amount = quantity * rate
@@ -28,22 +36,22 @@ Rules:
 - If a field is not mentioned, use empty string or 0
 - buyer_gstin should be a 15-character alphanumeric string if mentioned, otherwise ""
 - For unit, use common abbreviations: kg, pcs, ltr, m, box, etc.
-"""
+{_MULTILINGUAL_NOTE}"""
 
-FORWARDED_MSG_PROMPT = """You are an invoice data extractor. The user has forwarded several WhatsApp messages from a business negotiation. Extract the final agreed-upon invoice details from this conversation and return ONLY valid JSON.
+FORWARDED_MSG_PROMPT = f"""You are an invoice data extractor. The user has forwarded several WhatsApp messages from a business negotiation. Extract the final agreed-upon invoice details from this conversation and return ONLY valid JSON.
 
 Return format:
-{
+{{
   "buyer_name": "",
   "amount": 0,
-  "items": [{"description": "", "quantity": 0, "unit": "", "rate": 0}],
+  "items": [{{"description": "", "quantity": 0, "unit": "", "rate": 0}}],
   "gst_rate": 0,
   "buyer_gstin": "",
   "notes": ""
-}
+}}
 
 Focus on the final agreed price/quantity, not earlier negotiation offers. If fields are unclear, use empty string or 0.
-"""
+{_MULTILINGUAL_NOTE}"""
 
 
 async def extract_invoice_fields(

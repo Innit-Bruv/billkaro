@@ -1,13 +1,57 @@
-"""GST-compliant invoice PDF generator with mock IRN and QR code."""
+"""GST-compliant invoice PDF generator with mock IRN and QR code.
+
+Labels are bilingual when the seller has a non-English preferred language:
+English on top (required for GST filing compatibility) + regional script
+below. Font files are bundled under ``assets/fonts/`` and loaded lazily on
+first use.
+"""
 
 import hashlib
 import io
+import logging
+import os
 import uuid
 from datetime import datetime
 
 import qrcode
 from fpdf import FPDF
+from i18n.strings import t
 from models.invoice import Invoice
+
+logger = logging.getLogger(__name__)
+
+# --- Font registration ----------------------------------------------------
+
+_FONTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "fonts")
+
+# Which bundled font to use for each supported language.
+_LANG_FONT = {
+    "hi": ("NotoDev", "NotoSansDevanagari-VF.ttf"),
+    "mr": ("NotoDev", "NotoSansDevanagari-VF.ttf"),
+    "ta": ("NotoTam", "NotoSansTamil-VF.ttf"),
+    "ml": ("NotoMal", "NotoSansMalayalam-VF.ttf"),
+    "bn": ("NotoBen", "NotoSansBengali-VF.ttf"),
+}
+
+
+def _register_font(pdf: FPDF, lang: str) -> str | None:
+    """Register the Noto font for ``lang`` with ``pdf``. Returns the font
+    alias to use, or ``None`` if the language doesn't need a custom font or
+    the font file is missing."""
+    entry = _LANG_FONT.get(lang)
+    if not entry:
+        return None
+    alias, filename = entry
+    path = os.path.join(_FONTS_DIR, filename)
+    if not os.path.exists(path):
+        logger.warning("Noto font missing: %s — falling back to Helvetica", path)
+        return None
+    try:
+        pdf.add_font(alias, "", path)
+        return alias
+    except Exception as e:
+        logger.warning("Font registration failed for %s: %s", lang, e)
+        return None
 
 
 def generate_invoice_number() -> str:
@@ -31,9 +75,13 @@ def generate_qr_bytes(irn: str) -> bytes:
     return buf.getvalue()
 
 
-def generate_invoice_pdf(invoice: Invoice) -> bytes:
-    """Generate a GST-compliant invoice PDF and return bytes."""
-    # Ensure invoice number exists
+def generate_invoice_pdf(invoice: Invoice, lang: str = "en") -> bytes:
+    """Generate a GST-compliant invoice PDF and return bytes.
+
+    ``lang`` controls the regional-script label layer. English labels are
+    always present (required for GST compliance); regional labels appear
+    alongside when ``lang`` is non-English and the font is available.
+    """
     if not invoice.invoice_number:
         invoice.invoice_number = generate_invoice_number()
 
@@ -42,6 +90,14 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
+
+    regional_font = _register_font(pdf, lang) if lang and lang != "en" else None
+
+    def _regional(key: str) -> str | None:
+        """Return the regional label for ``key`` if we have a font for it."""
+        if not regional_font:
+            return None
+        return t(key, lang)
 
     # --- Header ---
     pdf.set_font("Helvetica", "B", 18)
@@ -54,7 +110,7 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
     pdf.cell(95, 6, f"Date: {invoice.date}", align="R", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
 
-    # --- Seller / Buyer ---
+    # --- Seller / Buyer block ---
     pdf.set_font("Helvetica", "B", 10)
     pdf.cell(95, 6, "Seller", new_x="END")
     pdf.cell(95, 6, "Buyer", new_x="LMARGIN", new_y="NEXT")
@@ -64,6 +120,16 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
     pdf.cell(95, 5, invoice.buyer_name or "-", new_x="LMARGIN", new_y="NEXT")
     pdf.cell(95, 5, f"GSTIN: {invoice.seller_gstin or 'N/A'}", new_x="END")
     pdf.cell(95, 5, f"GSTIN: {invoice.buyer_gstin or 'N/A'}", new_x="LMARGIN", new_y="NEXT")
+
+    # Regional "Buyer" header (if font available) — small, gray, below the English line
+    reg_buyer = _regional("draft_buyer")
+    if reg_buyer:
+        pdf.set_font(regional_font, "", 8)
+        pdf.set_text_color(110, 110, 110)
+        pdf.cell(95, 5, "", new_x="END")
+        pdf.cell(95, 5, reg_buyer, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(0, 0, 0)
+
     pdf.ln(6)
 
     # --- Line items table ---
@@ -110,6 +176,16 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
     pdf.set_x(x_label)
     pdf.cell(30, 8, "Total:", align="R")
     pdf.cell(30, 8, f"Rs. {invoice.total:,.2f}", align="R", new_x="LMARGIN", new_y="NEXT")
+
+    # Regional "Total" label below, right-aligned under the amount
+    reg_total = _regional("draft_total")
+    if reg_total:
+        pdf.set_font(regional_font, "", 8)
+        pdf.set_text_color(110, 110, 110)
+        pdf.set_x(x_label)
+        pdf.cell(60, 5, reg_total, align="R", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(0, 0, 0)
+
     pdf.ln(6)
 
     # --- IRN ---
