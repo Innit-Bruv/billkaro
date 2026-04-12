@@ -15,6 +15,10 @@ venv/
 # IDE
 .vscode/
 .idea/
+
+# Claude Code local config
+.claude/settings.local.json
+.claude/plugins/
 *.swp
 *.swo
 
@@ -29,3 +33,5 @@ htmlcov/
 
 # Generated
 *.pdf
+.gstack/
+supabase/.temp/

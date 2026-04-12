@@ -4,141 +4,225 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BillKaro — WhatsApp Invoice Bot</title>
-    <link rel="stylesheet" href="/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/landing.css">
 </head>
 <body>
-    <div class="landing">
+    <!-- Noise overlay -->
+    <div class="noise"></div>
+
+    <nav>
+        <div class="nav-inner">
+            <a href="/" class="logo">Bill<span>Karo</span></a>
+            <a href="/chat.html" class="nav-cta">Try the demo</a>
+        </div>
+    </nav>
+
+    <main>
         <!-- Hero -->
         <section class="hero">
-            <div class="hero-content">
-                <div class="badge">Powered by Sarvam AI</div>
-                <h1>Invoice on WhatsApp.<br>In 60 seconds.</h1>
-                <p class="subtitle">
-                    Send a voice note or text. Get a GST-compliant invoice PDF.
-                    No app to download. No forms to fill.
+            <div class="hero-left">
+                <p class="eyebrow">WhatsApp-native invoicing</p>
+                <h1>Voice note in.<br>Invoice out.</h1>
+                <p class="hero-sub">
+                    Indian sellers close deals on WhatsApp. BillKaro lets them generate
+                    GST-compliant invoices without ever leaving the chat — via voice,
+                    text, or forwarded messages.
                 </p>
-                <div class="cta-row">
-                    <a href="/chat.html" class="btn btn-primary">Try Web Demo</a>
-                    <a href="#how-it-works" class="btn btn-outline">See How It Works</a>
+                <div class="hero-actions">
+                    <a href="/chat.html" class="btn-main">Open web demo</a>
+                    <a href="#how" class="btn-ghost">How it works &darr;</a>
+                </div>
+                <p class="hero-footnote">No signup. No app download. 60 seconds.</p>
+            </div>
+            <div class="hero-right">
+                <div class="phone-frame">
+                    <div class="phone-notch"></div>
+                    <div class="phone-screen">
+                        <div class="wa-header">
+                            <div class="wa-avatar">B</div>
+                            <div>
+                                <div class="wa-name">BillKaro</div>
+                                <div class="wa-status">online</div>
+                            </div>
+                        </div>
+                        <div class="wa-chat">
+                            <div class="wa-msg wa-bot">
+                                <p>Welcome! Send a voice note or text me your invoice details.</p>
+                            </div>
+                            <div class="wa-msg wa-user">
+                                <p>Ramesh Traders ka invoice banao, 150kg cotton, ₹45,000, 12% GST</p>
+                            </div>
+                            <div class="wa-msg wa-bot">
+                                <p><strong>Invoice Draft</strong><br>
+                                Buyer: Ramesh Traders<br>
+                                Item: Cotton — 150kg<br>
+                                Amount: ₹45,000 + 12% GST<br>
+                                Total: ₹50,400</p>
+                                <div class="wa-buttons">
+                                    <span class="wa-btn-pill">Confirm</span>
+                                    <span class="wa-btn-pill wa-btn-dim">Edit</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- Problem / Solution -->
-        <section class="comparison" id="how-it-works">
-            <div class="compare-card old">
-                <h3>Before BillKaro</h3>
+        <!-- Before/After -->
+        <section class="contrast" id="how">
+            <div class="contrast-block contrast-old">
+                <div class="contrast-label">Before</div>
+                <div class="contrast-time">~15 min</div>
                 <ol>
-                    <li>Agree on deal in WhatsApp</li>
-                    <li>Open Tally / Vyapar / call your CA</li>
-                    <li>Manually enter all fields</li>
+                    <li>Close deal on WhatsApp</li>
+                    <li>Switch to Tally / Vyapar / call CA</li>
+                    <li>Manually key in every field</li>
                     <li>Generate PDF, download</li>
-                    <li>Go back to WhatsApp, send</li>
+                    <li>Go back to WhatsApp, attach, send</li>
                 </ol>
-                <div class="time-badge">~15 minutes</div>
             </div>
-            <div class="compare-card new">
-                <h3>With BillKaro</h3>
+            <div class="contrast-divider">
+                <span>vs</span>
+            </div>
+            <div class="contrast-block contrast-new">
+                <div class="contrast-label">With BillKaro</div>
+                <div class="contrast-time">~60 sec</div>
                 <ol>
-                    <li>Agree on deal in WhatsApp</li>
-                    <li>Send voice note: "Ramesh ka invoice banao..."</li>
-                    <li>Tap Confirm</li>
+                    <li>Close deal on WhatsApp</li>
+                    <li>Send voice note or text</li>
+                    <li>Tap <strong>Confirm</strong></li>
                 </ol>
-                <div class="time-badge highlight">~60 seconds</div>
             </div>
         </section>
 
-        <!-- Input Modes -->
-        <section class="input-modes">
-            <h2>Three Ways to Create an Invoice</h2>
-            <div class="modes-grid">
-                <div class="mode-card">
-                    <div class="mode-icon">🎙</div>
-                    <h4>Voice Note</h4>
+        <!-- Input modes -->
+        <section class="modes">
+            <h2>Three inputs. Same result.</h2>
+            <div class="modes-row">
+                <div class="mode">
+                    <div class="mode-num">01</div>
+                    <h3>Voice note</h3>
                     <div class="mode-example">
-                        <em>"Ramesh Traders ka invoice banao, 150kg cotton, 45000 rupees, 12% GST"</em>
+                        "Ramesh Traders ka invoice banao, 150kg cotton, 45000 rupees, 12% GST"
                     </div>
-                    <p>Speak naturally in Hindi, English, or Hinglish. Sarvam Saaras V3 handles 22 Indian languages.</p>
+                    <p>Speak in Hindi, English, Tamil, or any of 22 Indian languages. Sarvam Saaras V3 handles the rest.</p>
                 </div>
-                <div class="mode-card">
-                    <div class="mode-icon">⌨</div>
-                    <h4>Text Message</h4>
+                <div class="mode">
+                    <div class="mode-num">02</div>
+                    <h3>Text message</h3>
                     <div class="mode-example">
-                        <em>Invoice Kumar Enterprises 72000 200kg steel rods 18% GST</em>
+                        Invoice Kumar Enterprises 200kg steel rods 72000 18% GST
                     </div>
-                    <p>Type it out in any format. The AI figures out buyer, items, quantities, and GST.</p>
+                    <p>No format required. The AI figures out buyer, items, quantities, and tax rate.</p>
                 </div>
-                <div class="mode-card">
-                    <div class="mode-icon">↪</div>
-                    <h4>Forwarded Messages</h4>
-                    <div class="mode-example forwarded-example">
-                        <div class="fwd-msg"><span class="fwd-label">Ramesh:</span> Can you do 150kg cotton?</div>
-                        <div class="fwd-msg"><span class="fwd-label">You:</span> Yes, 300/kg works</div>
-                        <div class="fwd-msg"><span class="fwd-label">Ramesh:</span> Done. 12% GST right?</div>
-                        <div class="fwd-msg"><span class="fwd-label">You:</span> Yes, total 50400 with GST</div>
+                <div class="mode">
+                    <div class="mode-num">03</div>
+                    <h3>Forwarded chat</h3>
+                    <div class="mode-example mode-example-fwd">
+                        <span><em>Ramesh:</em> Can you do 150kg cotton?</span>
+                        <span><em>You:</em> Yes, 300/kg works</span>
+                        <span><em>Ramesh:</em> Done. 12% GST right?</span>
+                        <span><em>You:</em> Yes, total 50400 with GST</span>
                     </div>
-                    <p>Forward your negotiation chat. The AI extracts the final agreed deal — not earlier offers.</p>
+                    <p>Forward the negotiation. AI extracts the final agreed deal — not earlier offers.</p>
                 </div>
             </div>
         </section>
 
         <!-- Pipeline -->
         <section class="pipeline">
-            <h2>How It Works</h2>
-            <div class="pipeline-steps">
-                <div class="step">
-                    <div class="step-num">1</div>
-                    <h4>Voice / Text Input</h4>
-                    <p>Send a voice note in any Indian language or type your invoice details</p>
+            <h2>Under the hood</h2>
+            <div class="pipeline-row">
+                <div class="pipe-step">
+                    <div class="pipe-icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5"/><path d="M12 19v3M8 22h8" stroke-linecap="round"/></svg>
+                    </div>
+                    <h4>Input</h4>
+                    <p>Voice, text, or forwarded messages via WhatsApp or web</p>
                 </div>
-                <div class="step-arrow">&rarr;</div>
-                <div class="step">
-                    <div class="step-num">2</div>
-                    <h4>AI Extraction</h4>
-                    <p>Sarvam Saaras V3 (STT) + Sarvam-30B extracts buyer, items, GST rate</p>
+                <div class="pipe-arrow"></div>
+                <div class="pipe-step">
+                    <div class="pipe-icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3" stroke-linecap="round"/></svg>
+                    </div>
+                    <h4>Saaras V3 STT</h4>
+                    <p>Transcribes 22 Indian languages with code-mixing support</p>
                 </div>
-                <div class="step-arrow">&rarr;</div>
-                <div class="step">
-                    <div class="step-num">3</div>
-                    <h4>Review & Confirm</h4>
-                    <p>See a structured draft, edit if needed, tap Confirm</p>
+                <div class="pipe-arrow"></div>
+                <div class="pipe-step">
+                    <div class="pipe-icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6M7 16h8" stroke-linecap="round"/></svg>
+                    </div>
+                    <h4>Sarvam-30B</h4>
+                    <p>Extracts buyer, items, quantities, GST — structured JSON via chat completions</p>
                 </div>
-                <div class="step-arrow">&rarr;</div>
-                <div class="step">
-                    <div class="step-num">4</div>
+                <div class="pipe-arrow"></div>
+                <div class="pipe-step">
+                    <div class="pipe-icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6M9 17h4" stroke-linecap="round"/></svg>
+                    </div>
                     <h4>Invoice PDF</h4>
-                    <p>GST-compliant PDF with IRN and QR code, sent instantly</p>
+                    <p>GST-compliant PDF with IRN and QR code, delivered instantly</p>
                 </div>
             </div>
         </section>
 
-        <!-- Tech Stack -->
-        <section class="tech">
-            <h2>Built With</h2>
-            <div class="tech-grid">
-                <div class="tech-item">
-                    <strong>Sarvam Saaras V3</strong>
-                    <span>Speech-to-Text for 22 Indian languages</span>
-                </div>
-                <div class="tech-item">
-                    <strong>Sarvam-30B</strong>
-                    <span>Invoice field extraction via chat completions</span>
-                </div>
-                <div class="tech-item">
-                    <strong>WhatsApp Cloud API</strong>
-                    <span>Native WhatsApp experience, zero friction</span>
-                </div>
-                <div class="tech-item">
-                    <strong>FastAPI + Python</strong>
-                    <span>Async backend with adapter pattern</span>
+        <!-- Built with -->
+        <section class="stack">
+            <div class="stack-inner">
+                <h2>Built with</h2>
+                <div class="stack-items">
+                    <div class="stack-chip">Sarvam Saaras V3 <span>STT</span></div>
+                    <div class="stack-chip">Sarvam-30B <span>NLP</span></div>
+                    <div class="stack-chip">WhatsApp Cloud API <span>v21.0</span></div>
+                    <div class="stack-chip">FastAPI <span>Python</span></div>
+                    <div class="stack-chip">Supabase <span>Postgres</span></div>
                 </div>
             </div>
         </section>
+    </main>
 
-        <!-- Footer -->
-        <footer>
-            <p>BillKaro &mdash; a demo by Haaziq for Sarvam AI</p>
-        </footer>
-    </div>
+    <footer>
+        <div class="footer-inner">
+            <span>BillKaro</span>
+            <span class="footer-sep">/</span>
+            <span>A demo by Haaziq for Sarvam AI</span>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const groups = [
+            document.querySelectorAll('.contrast-block'),
+            document.querySelectorAll('.mode'),
+            document.querySelectorAll('.pipe-step'),
+        ];
+
+        let delay = 0;
+        groups.forEach(group => {
+            group.forEach(el => {
+                el.classList.add('fade-up');
+                el.style.transitionDelay = `${delay}s`;
+                delay += 0.07;
+            });
+            delay = 0;
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+        document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+    });
+    </script>
 </body>
 </html>
