@@ -47,6 +47,7 @@ logger = logging.getLogger(__name__)
 
 # In-memory session store (replaced by DB in production)
 _sessions: dict[str, Session] = {}
+_reset_ids: set[str] = set()  # sessions explicitly reset — skip store reload
 
 
 def get_session(session_id: str) -> Session:
@@ -57,6 +58,7 @@ def get_session(session_id: str) -> Session:
 
 def reset_session(session_id: str) -> Session:
     _sessions[session_id] = Session(session_id=session_id)
+    _reset_ids.add(session_id)
     return _sessions[session_id]
 
 
@@ -65,11 +67,12 @@ async def handle_message(msg: IncomingMessage) -> BotResponse:
     session = get_session(msg.session_id)
     session.touch()
 
-    # Load seller profile from disk if not yet in memory
-    if session.seller_profile is None:
+    # Load seller profile from disk if not yet in memory (skip if session was just reset)
+    if session.seller_profile is None and msg.session_id not in _reset_ids:
         loaded = seller_store.load(msg.session_id)
         if loaded:
             session.seller_profile = loaded
+    _reset_ids.discard(msg.session_id)
 
     # Handle reset command — clears both session and seller profile
     if msg.type == MessageType.TEXT and msg.text.strip().lower() in ("reset", "start over", "new", "cancel"):
